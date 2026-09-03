@@ -28,7 +28,7 @@ jobs:
           mkdir -p .github/workflows
           find .github -mindepth 1 -maxdepth 1 ! -name workflows -exec rm -rf {} + || true
           find .github/workflows -mindepth 1 -maxdepth 1 ! -name bootstrap-maplibre-fork.yml -exec rm -rf {} + || true
-          rsync -a --delete-excluded \
+          rsync -a \
             --exclude '.git/' \
             --exclude '.github/workflows/' \
             /tmp/maplibre-navigation-android/ ./
