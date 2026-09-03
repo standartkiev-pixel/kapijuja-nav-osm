@@ -46,6 +46,7 @@ jobs:
         shell: bash
         env:
           VERSION: 0.0.0-kapijuja
+          STADIA_API_KEY: ${{ secrets.STADIA_API_KEY }}
         run: |
           set -o pipefail
           ./gradlew :app:assembleDebug --stacktrace --info 2>&1 | tee build-apk.log
@@ -60,7 +61,7 @@ jobs:
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: Kapijuja-Nav-MapLibre-debug
+          name: Kapijuja-Nav-BUS16-debug
           path: app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
           retention-days: 30
@@ -69,7 +70,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: Kapijuja-Nav-build-log
+          name: Kapijuja-Nav-BUS16-build-log
           path: build-apk.log
           if-no-files-found: warn
           retention-days: 14
