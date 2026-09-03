@@ -10,13 +10,23 @@ task accessToken {
             System.out.println("You should set the MAPBOX_ACCESS_TOKEN environment variable.")
             mapboxAccessToken = "YOUR_MAPBOX_ACCESS_TOKEN_GOES_HERE"
         }
+
+        String stadiaApiKey = "$System.env.STADIA_API_KEY"
+        String valhallaUrl
+        if (stadiaApiKey == "null" || stadiaApiKey.trim().isEmpty()) {
+            System.out.println("STADIA_API_KEY is not set; using the public Valhalla demo endpoint.")
+            valhallaUrl = "https://valhalla1.openstreetmap.de/route"
+        } else {
+            System.out.println("STADIA_API_KEY detected; using Stadia hosted Valhalla routing.")
+            valhallaUrl = "https://api.stadiamaps.com/route/v1?api_key=" + stadiaApiKey.trim()
+        }
+
         String tokenFileContents = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n" +
                 "<resources>\n" +
                 "    <!-- Your navigation base url (example: https://api.mapbox.com) -->\n" +
                 "    <string name=\"base_url\" translatable=\"false\">https://api.mapbox.com</string>\n" +
-                "    <!-- Your valhalla url (example: https://valhalla1.openstreetmap.de/route) -->\n" +
-                "    <!-- Don't use the following server in production, it is for demonstration purposes only: -->\n" +
-                "    <string name=\"valhalla_url\" translatable=\"false\">https://valhalla1.openstreetmap.de/route</string>\n" +
+                "    <!-- Kapijuja routing endpoint: Stadia/Valhalla when STADIA_API_KEY is present, public Valhalla demo otherwise. -->\n" +
+                "    <string name=\"valhalla_url\" translatable=\"false\">" + valhallaUrl + "</string>\n" +
                 "    <!-- Instead of valhalla you can use GraphHopper for the path finding. Example: https://graphhopper.com/api/1/navigate?key=YOUR_API_KEY or a local server -->\n" +
                 "    <!-- Don't use the following API key in production, it is for demonstration purposes only: -->\n" +
                 "    <string name=\"graphhopper_url\" translatable=\"false\">https://graphhopper.com/api/1/navigate?key=7088b84f-4cee-4059-96de-fd0cbda2fdff</string>\n" +
