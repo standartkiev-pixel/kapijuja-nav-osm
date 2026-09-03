@@ -35,15 +35,15 @@ jobs:
           mkdir -p .github/upstream-workflows
           cp -a /tmp/maplibre-navigation-android/.github/workflows/. .github/upstream-workflows/
 
-          # Upstream contains an old Mapbox access token in two historical reroute fixtures.
-          # Keep the fixtures, but redact the token so GitHub Push Protection stays enabled.
+          # Upstream contains an old Mapbox access token in historical reroute fixtures.
+          # Keep the fixtures, redact only imported source data, and never modify .github.
           python3 - <<'PY'
           from pathlib import Path
           import re
 
           changed = 0
           for path in Path('.').rglob('*'):
-              if not path.is_file() or '.git' in path.parts:
+              if not path.is_file() or '.git' in path.parts or '.github' in path.parts:
                   continue
               try:
                   raw = path.read_bytes()
@@ -51,7 +51,10 @@ jobs:
                   continue
               if b'\x00' in raw or b'access_token=' not in raw:
                   continue
-              text = raw.decode('utf-8', errors='strict')
+              try:
+                  text = raw.decode('utf-8')
+              except UnicodeDecodeError:
+                  continue
               clean, count = re.subn(r'access_token=[^&"\\\s]+', 'access_token=REDACTED_UPSTREAM_TOKEN', text)
               if count:
                   path.write_text(clean, encoding='utf-8')
