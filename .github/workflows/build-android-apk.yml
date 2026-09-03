@@ -1,0 +1,75 @@
+name: Build Kapijuja Nav Android APK
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'app/**'
+      - 'libandroid-navigation-ui/**'
+      - 'maplibre-navigation-core/**'
+      - 'maplibre-navigation-location-gms/**'
+      - 'gradle/**'
+      - 'gradlew'
+      - 'gradle.properties'
+      - 'settings.gradle.kts'
+      - 'build.gradle.kts'
+      - 'VERSION'
+      - '.github/workflows/build-android-apk.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+
+      - name: Prepare Gradle
+        shell: bash
+        run: |
+          chmod +x gradlew
+          ./gradlew --version
+
+      - name: Build debug APK
+        shell: bash
+        env:
+          VERSION: 0.0.0-kapijuja
+        run: |
+          set -o pipefail
+          ./gradlew :app:assembleDebug --stacktrace --info 2>&1 | tee build-apk.log
+
+      - name: Show APK files
+        if: always()
+        shell: bash
+        run: |
+          find app/build/outputs/apk -type f -name '*.apk' -print 2>/dev/null || true
+
+      - name: Upload APK
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Kapijuja-Nav-MapLibre-debug
+          path: app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Kapijuja-Nav-build-log
+          path: build-apk.log
+          if-no-files-found: warn
+          retention-days: 14
