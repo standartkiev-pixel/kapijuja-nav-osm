@@ -113,7 +113,7 @@ class ValhallaNavigationActivity :
 
             Snackbar.make(
                 findViewById(R.id.container),
-                "Tap map to place destination",
+                "Kapijuja BUS 16 t: tap map to place destination",
                 Snackbar.LENGTH_LONG,
             ).show()
         }
@@ -171,18 +171,11 @@ class ValhallaNavigationActivity :
             return
         }
 
-        // The full Valhalla API is documented here:
-        // https://valhalla.github.io/valhalla/api/turn-by-turn/api-reference/
-
-        // It would be better if there was a proper ValhallaService which uses retrofit to
-        // generate the API call similar to the DirectionsService for the Mapbox API:
-        // https://github.com/mapbox/mapbox-java/blob/main/services-directions/src/main/java/com/mapbox/api/directions/v5/DirectionsService.java
-        // That would allow us to skip adding fake attributes further down as well.
-        // But this is the first step to show how the newly added banner_instructions
-        // and voice_instructions of Valhalla can be used to generate directions directly:
+        // Kapijuja test profile: a real Valhalla BUS costing profile with a 16 metric tonne weight.
+        // Keep this change at the request/configuration layer so MapLibre navigation core remains upstream-clean.
         val requestBodyJson = buildJsonObject {
             put("format", "osrm")
-            put("costing", "auto")
+            put("costing", "bus")
             put("banner_instructions", true)
             put("voice_instructions", true)
             put("language", language)
@@ -190,8 +183,9 @@ class ValhallaNavigationActivity :
                 put("units", "kilometers")
             }
             putJsonObject("costing_options") {
-                putJsonObject("auto") {
-                    put("top_speed", 130)
+                putJsonObject("bus") {
+                    // Valhalla weight is expressed in metric tonnes.
+                    put("weight", 16)
                 }
             }
             putJsonArray("locations") {
@@ -209,27 +203,33 @@ class ValhallaNavigationActivity :
         }.toString()
         val client = OkHttpClient()
 
-        // Create request object. Requires valhalla_url to be set in developer-config.xml
-        // Don't use the following server in production, it is for demonstration purposes only:
-        // <string name="valhalla_url" translatable="false">https://valhalla1.openstreetmap.de/route</string>
+        // valhalla_url is generated at build time. CI uses the STADIA_API_KEY secret for the
+        // hosted Stadia/Valhalla endpoint; local builds without a key keep the upstream demo fallback.
         val request = Request.Builder()
-            .header("User-Agent", "MapLibre Android Navigation SDK Demo App")
+            .header("User-Agent", "Kapijuja Nav BUS / MapLibre Navigation")
             .url(getString(R.string.valhalla_url))
             .post(requestBodyJson.toRequestBody("application/json; charset=utf-8".toMediaType()))
             .build()
 
-        Timber.d("calculateRoute enqueued requestBodyJson: %s", requestBodyJson)
+        Timber.d("calculateRoute enqueued BUS requestBodyJson: %s", requestBodyJson)
         client.newCall(request).enqueue(object : okhttp3.Callback {
 
             override fun onFailure(call: okhttp3.Call, e: IOException) {
-                Timber.e(e, "calculateRoute Failed to get route from ValhallaRouting")
+                Timber.e(e, "calculateRoute Failed to get BUS route from ValhallaRouting")
+                runOnUiThread {
+                    Snackbar.make(
+                        findViewById(R.id.container),
+                        "BUS route request failed: ${e.localizedMessage ?: "network error"}",
+                        Snackbar.LENGTH_LONG,
+                    ).show()
+                }
             }
 
             override fun onResponse(call: okhttp3.Call, response: okhttp3.Response) {
                 response.use {
                     if (response.isSuccessful) {
-                        Timber.e(
-                            "calculateRoute to ValhallaRouting successful with status code: %s",
+                        Timber.i(
+                            "calculateRoute BUS route successful with status code: %s",
                             response.code
                         )
                         val responseBodyJson = response.body!!.string()
@@ -237,17 +237,16 @@ class ValhallaNavigationActivity :
                             "calculateRoute ValhallaRouting responseBodyJson: %s",
                             responseBodyJson
                         )
-                        val maplibreResponse = DirectionsResponse.fromJson(responseBodyJson);
+                        val maplibreResponse = DirectionsResponse.fromJson(responseBodyJson)
                         this@ValhallaNavigationActivity.route = maplibreResponse.routes
                             .first()
                             .copy(
                                 routeOptions = RouteOptions(
-                                    // These dummy route options are not not used to create directions,
+                                    // These dummy route options are not used to create directions,
                                     // but currently they are necessary to start the navigation
                                     // and to use the voice instructions.
-                                    // Again, this isn't ideal, but it is a requirement of the framework.
                                     baseUrl = "https://valhalla.routing",
-                                    profile = "valhalla",
+                                    profile = "valhalla-bus",
                                     user = "valhalla",
                                     accessToken = "valhalla",
                                     voiceInstructions = true,
@@ -261,13 +260,26 @@ class ValhallaNavigationActivity :
                         runOnUiThread {
                             navigationMapRoute?.addRoutes(maplibreResponse.routes)
                             binding.startRouteLayout.visibility = View.VISIBLE
+                            Snackbar.make(
+                                findViewById(R.id.container),
+                                "BUS 16 t route ready",
+                                Snackbar.LENGTH_SHORT,
+                            ).show()
                         }
                     } else {
+                        val errorBody = response.body?.string().orEmpty()
                         Timber.e(
                             "calculateRoute Request to Valhalla failed with status code: %s: %s",
                             response.code,
-                            response.body
+                            errorBody
                         )
+                        runOnUiThread {
+                            Snackbar.make(
+                                findViewById(R.id.container),
+                                "BUS route failed: HTTP ${response.code}",
+                                Snackbar.LENGTH_LONG,
+                            ).show()
+                        }
                     }
                 }
             }
