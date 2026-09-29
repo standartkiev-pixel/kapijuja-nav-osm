@@ -64,7 +64,7 @@ jobs:
           name: Kapijuja-Nav-BUS16-debug
           path: app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
-          retention-days: 30
+          retention-days: 3
 
       - name: Upload build log
         if: always()
@@ -73,4 +73,4 @@ jobs:
           name: Kapijuja-Nav-BUS16-build-log
           path: build-apk.log
           if-no-files-found: warn
-          retention-days: 14
+          retention-days: 3
